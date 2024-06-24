@@ -23,9 +23,11 @@ import WASILibc
 public struct JsonStreamLogHandler: LogHandler {
     public struct Configuration: Sendable {
         public var metadataKey: String
+        public var timestampKey: String
 
-        public init(metadataKey: String = "metadata") {
+        public init(metadataKey: String = "metadata", timestampKey: String = "timestamp") {
             self.metadataKey = metadataKey
+            self.timestampKey = timestampKey
         }
     }
 
@@ -78,7 +80,7 @@ public struct JsonStreamLogHandler: LogHandler {
         var stream = self.stream
         
         var jsonObject : JSON.Object = [
-            "timestamp": .string(.init(self.timestamp())),
+            .init(rawValue: "\(self.config.timestampKey)"): .string(.init(self.timestamp())),
             "level": .string(.init("\(level)")),
             "message": .string(.init("\(message)")),
             "logger_label": .string(.init(self.label)),
