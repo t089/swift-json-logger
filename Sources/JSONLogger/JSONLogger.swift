@@ -58,6 +58,8 @@ public struct JsonStreamLogHandler: LogHandler {
             self.metadataJson = self.jsonfy(self.metadata)
         }
     }
+
+    public var metadataProvider: Logger.MetadataProvider?
     
     private var metadataJson: JSON.Object?
 
@@ -89,16 +91,42 @@ public struct JsonStreamLogHandler: LogHandler {
             "function": .string(.init(function)),
             "line": .number(.init(line))
         ]
+
+        let effectiveMetadata = Self.prepareMetadata(base: self.metadata, provider: self.metadataProvider, explicit: metadata)
         
-        let jsonMetadata = metadata?.isEmpty ?? true
-            ? self.metadataJson
-            : self.jsonfy(self.metadata.merging(metadata!, uniquingKeysWith: { _, new in new }))
+        let jsonMetadata : JSON.Object?
+        if let effectiveMetadata {
+            jsonMetadata = self.jsonfy(effectiveMetadata)
+        } else {
+            jsonMetadata = self.metadataJson
+        }
         
         if let meta = jsonMetadata {
             jsonObject[.init(rawValue: self.config.metadataKey)] = .object(meta)
         }
         
         stream.write("\(jsonObject)\n")
+    }
+
+    internal static func prepareMetadata(base: Logger.Metadata, provider: Logger.MetadataProvider?, explicit: Logger.Metadata?) -> Logger.Metadata? {
+        var metadata = base
+
+        let provided = provider?.get() ?? [:]
+
+        guard !provided.isEmpty || !((explicit ?? [:]).isEmpty) else {
+            // all per-log-statement values are empty
+            return nil
+        }
+
+        if !provided.isEmpty {
+            metadata.merge(provided, uniquingKeysWith: { _, provided in provided })
+        }
+
+        if let explicit = explicit, !explicit.isEmpty {
+            metadata.merge(explicit, uniquingKeysWith: { _, explicit in explicit })
+        }
+
+        return metadata
     }
     
     private func jsonfy(_ metadata: Logger.Metadata) -> JSON.Object? {

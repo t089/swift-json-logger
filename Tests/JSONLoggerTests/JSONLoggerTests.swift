@@ -95,6 +95,26 @@ final class JSONLoggerTests: XCTestCase {
         XCTAssertEqual("test value", json["metadata"]?.value.object?["test-key"]?.as(String.self))
         XCTAssertEqual("explicit value", json["metadata"]?.value.object?["explicit_key"]?.as(String.self))
     }
+
+    func testLogMessageWithMetadataAndExplicityMetadataAndProvider() {
+        let output = CollectingTextOutputStream()
+        var logger = JsonStreamLogHandler(label: "Test", stream: output)
+        logger[metadataKey: "test-key"] = "test value"
+
+        logger.metadataProvider = .init {
+            ["provided": .string("provided value")]
+        }
+
+        logger.log(level: .info, message: "message", metadata: ["explicit_key": "explicit value"], source: "source", file: #file, function: #function, line: #line)
+
+        let json = output.lastLineAsJson!
+
+        XCTAssertEqual("test value", json["metadata"]?.value.object?["test-key"]?.as(String.self))
+        XCTAssertEqual("explicit value", json["metadata"]?.value.object?["explicit_key"]?.as(String.self))
+        XCTAssertEqual("provided value", json["metadata"]?.value.object?["provided"]?.as(String.self))
+    }
 }
+
+
 
 
