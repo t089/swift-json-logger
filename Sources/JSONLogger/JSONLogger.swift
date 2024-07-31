@@ -120,9 +120,34 @@ public struct JsonStreamLogHandler: LogHandler {
 
         _ = strftime(&buffer, buffer.count, "%Y-%m-%dT%H:%M:%S%z", &localTime)
         #else
-        var timestamp = time(nil)
-        let localTime = localtime(&timestamp)
-        strftime(&buffer, buffer.count, "%Y-%m-%dT%H:%M:%S%z", localTime)
+
+        var tv = timeval()
+        gettimeofday(&tv, nil)
+
+        var localTime = tm()
+        localtime_r(&tv.tv_sec, &localTime)
+
+        let lengthOfPrefix = strftime(&buffer, buffer.count, "%Y-%m-%dT%H:%M:%S", &localTime)
+        precondition(lengthOfPrefix > 0, "strftime failed")
+
+        let microseconds = tv.tv_usec
+        let offset = localTime.tm_gmtoff
+        let hours = offset / 3600
+        let minutes = abs(offset % 3600 / 60)
+
+        buffer.withUnsafeBufferPointer { 
+            $0.withMemoryRebound(to: CChar.self) {
+                let secondPartStart = $0.baseAddress!.advanced(by: lengthOfPrefix)
+                let secondPartSize = buffer.count - lengthOfPrefix
+
+                precondition(secondPartSize >= 0)
+
+                withVaList([ microseconds, hours, minutes ]) { args in 
+                    _ = vsnprintf(UnsafeMutablePointer(mutating: secondPartStart), secondPartSize, ".%06d%+03d%02d", args)
+                }
+            }
+        }
+
         #endif
         return buffer.withUnsafeBufferPointer {
             $0.withMemoryRebound(to: CChar.self) {

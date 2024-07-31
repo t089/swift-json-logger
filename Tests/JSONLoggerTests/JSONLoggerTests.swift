@@ -38,6 +38,8 @@ final class JSONLoggerTests: XCTestCase {
             logger.log(level: .warning, message: "Test message \(i)", metadata: nil, source: "source \(i)", file: "file \(i)", function: "function \(i)", line: .init(i))
         }
 
+        let timestampRegex = try Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}\\+[0-9]{4}")
+
         for (idx, line) in output.collected.split(separator: "\n").enumerated() {
             let object = try JSON.Object(parsing: line)
             let json = try JSON.ObjectDecoder<JSON.Key>(indexing: object)
@@ -47,6 +49,9 @@ final class JSONLoggerTests: XCTestCase {
             XCTAssertEqual("file \(idx)", json["file"]?.value.as(String.self))
             XCTAssertEqual("function \(idx)", json["function"]?.value.as(String.self))
             XCTAssertEqual(idx, try? json["line"]?.value.as(Int.self))
+            
+            let timestamp = json["timestamp"]?.value.as(String.self) ?? ""
+            XCTAssertNotNil(try! timestampRegex.firstMatch(in: timestamp))   
         }
     }
 
