@@ -24,10 +24,15 @@ public struct JsonStreamLogHandler: LogHandler {
     public struct Configuration: Sendable {
         public var metadataKey: String
         public var timestampKey: String
+        public var topLevelKeys: Set<String>
 
-        public init(metadataKey: String = "metadata", timestampKey: String = "timestamp") {
+        public init(
+            metadataKey: String = "metadata",
+            timestampKey: String = "timestamp",
+            topLevelKeys: Set<String> = []) {
             self.metadataKey = metadataKey
             self.timestampKey = timestampKey
+            self.topLevelKeys = topLevelKeys
         }
     }
 
@@ -101,7 +106,19 @@ public struct JsonStreamLogHandler: LogHandler {
             jsonMetadata = self.metadataJson
         }
         
-        if let meta = jsonMetadata {
+        if var meta = jsonMetadata {
+            if !self.config.topLevelKeys.isEmpty {
+                var i = meta.fields.startIndex
+                while i < meta.fields.endIndex {
+                    if self.config.topLevelKeys.contains(meta[i].key) {
+                        jsonObject[.init(rawValue: meta[i].key)] = meta[i].value
+                        meta.fields.remove(at: i)
+                    } else {
+                        meta.formIndex(after: &i)
+                    }
+                }
+            }
+            
             jsonObject[.init(rawValue: self.config.metadataKey)] = .object(meta)
         }
         

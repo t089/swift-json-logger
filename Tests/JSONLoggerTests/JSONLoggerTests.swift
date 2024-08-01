@@ -18,8 +18,8 @@ class CollectingTextOutputStream: TextOutputStream {
 final class JSONLoggerTests: XCTestCase {
     func testSimpleLogMessage() throws {
         let output = CollectingTextOutputStream()
-        let logger = JsonStreamLogHandler(label: "Test", stream: output)
-        logger.log(level: .warning, message: "Test message", metadata: nil, source: "source", file: "file", function: "function", line: 1337)
+        let logger = JsonStreamLogHandler(label: "Test", configuration: .init(topLevelKeys: ["trace.id"]), stream: output)
+        logger.log(level: .warning, message: "Test message", metadata: ["nestedKey": "nestedValue", "trace.id": "abc", "nestedKey2": "nestedValue"], source: "source", file: "file", function: "function", line: 1337)
         let object = try JSON.Object(parsing: output.collected)
         let json = try JSON.ObjectDecoder<JSON.Key>(indexing: object)
         XCTAssertEqual("warning",      json["level"]?.value.as(String.self))
@@ -28,6 +28,9 @@ final class JSONLoggerTests: XCTestCase {
         XCTAssertEqual("file", json["file"]?.value.as(String.self))
         XCTAssertEqual("function", json["function"]?.value.as(String.self))
         XCTAssertEqual(1337, try? json["line"]?.value.as(UInt.self))
+        XCTAssertEqual("abc", json["trace.id"]?.value.as(String.self))
+        XCTAssertEqual("nestedValue", try json["metadata"]?.decode(with: { $0["nestedKey"]?.value.as(String.self) }))
+        XCTAssertEqual("nestedValue", try json["metadata"]?.decode(with: { $0["nestedKey2"]?.value.as(String.self) }))
     }
 
     func testMultipleLogMessages() throws {
