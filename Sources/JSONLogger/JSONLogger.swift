@@ -188,12 +188,7 @@ public struct JsonStreamLogHandler: LogHandler {
                 precondition(secondPartSize >= 0)
 
                 withVaList([ microseconds, hours, minutes ]) { args in 
-                    #if canImport(Musl)
-                    // workaround for musl
-                    _ = vsnprintf(UnsafeMutablePointer(mutating: secondPartStart), secondPartSize, ".%06d%+03d%02d", unsafeBitCast(args, to: __isoc_va_list.self))
-                    #else 
                     _ = vsnprintf(UnsafeMutablePointer(mutating: secondPartStart), secondPartSize, ".%06d%+03d%02d", args)
-                    #endif
                 }
             }
         }
