@@ -184,11 +184,15 @@ public struct JsonStreamLogHandler: LogHandler {
             $0.withMemoryRebound(to: CChar.self) {
                 let secondPartStart = $0.baseAddress!.advanced(by: lengthOfPrefix)
                 let secondPartSize = buffer.count - lengthOfPrefix
-
+                
                 precondition(secondPartSize >= 0)
 
                 withVaList([ microseconds, hours, minutes ]) { args in 
+                    #if canImport(Musl) && arch(arm64)
+                    _ = vsnprintf(UnsafeMutablePointer(mutating: secondPartStart), secondPartSize, ".%06d%+03d%02d", unsafeBitCast(args, to: __isoc_va_list.self))
+                    #else
                     _ = vsnprintf(UnsafeMutablePointer(mutating: secondPartStart), secondPartSize, ".%06d%+03d%02d", args)
+                    #endif
                 }
             }
         }

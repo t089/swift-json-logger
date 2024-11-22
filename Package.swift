@@ -27,6 +27,12 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "JSON", package: "swift-json")
             ]),
+        .executableTarget(name: "Example",
+            dependencies: [
+                .product(name: "Logging", package: "swift-log"),
+                "JSONLogger"
+            ]
+        ),
         .testTarget(
             name: "JSONLoggerTests",
             dependencies: [
